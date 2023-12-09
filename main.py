@@ -54,7 +54,7 @@ class Board:
         if self.path_validity_check(dest_state):
             return dest_state
 
-        return (-1, -1)
+        return -1, -1
 
     def available_moves(self, current_state: (int, int)) -> list:
         valid_moves = []
@@ -102,6 +102,46 @@ class Board:
         return all('T' not in row for row in self.board)
 
 
+def dfs(start_node: Board) -> Optional[Board]:
+    visited = set()
+    stack = [start_node]
+
+    while stack:
+        current_node = stack.pop()
+        print(current_node)
+
+        curr_pos = current_node.current_position
+        current_node.update_energy(curr_pos)
+
+        if 'T' in current_node.board[curr_pos[0]][curr_pos[1]]:
+            current_node.update_target(curr_pos)
+            return current_node
+
+        moves = current_node.available_moves(curr_pos)
+        for move in moves:
+            child_node = Board(
+                current_node.board,
+                current_node.board_row_size,
+                current_node.board_col_size,
+                current_node.current_position,
+                current_node.energy
+            )
+            for _move in current_node.path_to_parent:
+                child_node.add_path(_move)
+
+            child_node.add_path(move)
+
+            new_position = current_node.move_validity(curr_pos, move)
+            child_node.current_position = new_position
+
+            if child_node not in visited:
+                stack.append(child_node)
+
+        visited.add(current_node)
+
+    return None
+
+
 class Tree:
     def __init__(self):
         self.tree: dict[Board: list[Board]] = dict()
@@ -112,45 +152,6 @@ class Tree:
 
         else:
             self.tree[root] = [dest]
-
-    def dfs(self, start_node: Board) -> Optional[Board]:
-        visited = set()
-        stack = [start_node]
-
-        while stack:
-            current_node = stack.pop()
-            print(current_node)
-
-            curr_pos = current_node.current_position
-            current_node.update_energy(curr_pos)
-
-            if 'T' in current_node.board[curr_pos[0]][curr_pos[1]]:
-                current_node.update_target(curr_pos)
-                return current_node
-
-            moves = current_node.available_moves(curr_pos)
-            for move in moves:
-                child_node = Board(
-                    current_node.board,
-                    current_node.board_row_size,
-                    current_node.board_col_size,
-                    current_node.current_position,
-                    current_node.energy
-                )
-                for _move in current_node.path_to_parent:
-                    child_node.add_path(_move)
-
-                child_node.add_path(move)
-
-                new_position = current_node.move_validity(curr_pos, move)
-                child_node.current_position = new_position
-
-                if child_node not in visited:
-                    stack.append(child_node)
-
-            visited.add(current_node)
-
-        return None
 
     def bfs(self, root_node: Board) -> Optional[Board]:
         queue = deque([root_node])

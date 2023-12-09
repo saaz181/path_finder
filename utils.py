@@ -47,7 +47,7 @@ def run_dfs():
     board = Board(matrix, 6, 10, initial_position, initial_energy)
 
     tree = Tree()
-    result = tree.dfs(board)
+    result = dfs(board)
 
     if result:
         print("DFS path:", result.path_to_parent)
