@@ -1,29 +1,27 @@
-from typing import Self
+from typing import Optional
 from collections import deque
 
 
-
-# TODO: Posistion class
+# TODO: Position class
 
 
 class Board:
     def __init__(self, board, row_size, col_size, current_position: (int, int), energy: int):
         self.board = board
         self.current_position = current_position
-        
+
         self.board_row_size = row_size
         self.board_col_size = col_size
 
         self.path_to_parent = []
-        
+
         self.moves = ['L', 'R', 'U', 'D']
         self.extra_energy = {'C': 10, 'B': 5, 'I': 12}
         self.other_notations = {'R', 'T'}
         self.energy = energy
-    
+
     def add_path(self, move):
         self.path_to_parent.append(move)
-
 
     def path_validity_check(self, dest: (int, int)) -> bool:
         d_row, d_col = dest
@@ -35,10 +33,8 @@ class Board:
         elif self.board[d_row][d_col] == 'X':
             path_is_valid = False
 
-
         return path_is_valid
 
-    
     def move_validity(self, current_state: (int, int), op_code: str) -> (int, int):
         row, col = current_state
         dest_state = (-1, -1)
@@ -57,15 +53,15 @@ class Board:
 
         if self.path_validity_check(dest_state):
             return dest_state
-        
+
         return (-1, -1)
-    
+
     def available_moves(self, current_state: (int, int)) -> list:
         valid_moves = []
         for _move in self.moves:
             if self.move_validity(current_state, _move) != (-1, -1):
                 valid_moves.append(_move)
-        
+
         return valid_moves
 
     def update_target(self, position: (int, int)) -> None:
@@ -93,7 +89,6 @@ class Board:
                 self.energy -= int(extra_energy_cell[0])
                 return
 
-        
         cell_energy_consume = int(self.board[row_index][col_index])
         self.energy -= cell_energy_consume
 
@@ -110,7 +105,7 @@ class Board:
 class Tree:
     def __init__(self):
         self.tree: dict[Board: list[Board]] = dict()
-    
+
     def add_edge(self, root: Board, dest: Board):
         if root in self.tree:
             self.tree.get(root).append(dest)
@@ -118,7 +113,7 @@ class Tree:
         else:
             self.tree[root] = [dest]
 
-    def dfs(self, start_node: Board) -> Board | None:
+    def dfs(self, start_node: Board) -> Optional[Board]:
         visited = set()
         stack = [start_node]
 
@@ -146,7 +141,7 @@ class Tree:
                     child_node.add_path(_move)
 
                 child_node.add_path(move)
-                
+
                 new_position = current_node.move_validity(curr_pos, move)
                 child_node.current_position = new_position
 
@@ -157,17 +152,15 @@ class Tree:
 
         return None
 
-
-    def bfs(self, root_node: Board) -> Board | None:
+    def bfs(self, root_node: Board) -> Optional[Board]:
         queue = deque([root_node])
-        visited = set()        
+        visited = set()
 
         while queue:
             current_node = queue.popleft()
 
             curr_pos = current_node.current_position
             current_node.update_energy(curr_pos)
-
 
             if 'T' in current_node.board[curr_pos[0]][curr_pos[1]]:
                 current_node.update_target(curr_pos)
@@ -184,11 +177,10 @@ class Tree:
                 )
                 for _move in current_node.path_to_parent:
                     child_node.add_path(_move)
-                
+
                 child_node.add_path(move)
                 new_position = current_node.move_validity(curr_pos, move)
                 child_node.current_position = new_position
-                
 
                 if child_node not in visited:
                     queue.append(child_node)
@@ -198,15 +190,4 @@ class Tree:
 
             visited.add(current_node)
 
-            
-
         return None
-
-
-
-
-
-    
-
-
-
