@@ -2,7 +2,6 @@ from typing import Self
 from collections import deque
 
 
-
 # TODO: Posistion class
 
 
@@ -10,20 +9,19 @@ class Board:
     def __init__(self, board, row_size, col_size, current_position: (int, int), energy: int):
         self.board = board
         self.current_position = current_position
-        
+
         self.board_row_size = row_size
         self.board_col_size = col_size
 
         self.path_to_parent = []
-        
+
         self.moves = ['L', 'R', 'U', 'D']
         self.extra_energy = {'C': 10, 'B': 5, 'I': 12}
         self.other_notations = {'R', 'T'}
         self.energy = energy
-    
+
     def add_path(self, move):
         self.path_to_parent.append(move)
-
 
     def path_validity_check(self, dest: (int, int)) -> bool:
         d_row, d_col = dest
@@ -35,10 +33,8 @@ class Board:
         elif self.board[d_row][d_col] == 'X':
             path_is_valid = False
 
-
         return path_is_valid
 
-    
     def move_validity(self, current_state: (int, int), op_code: str) -> (int, int):
         row, col = current_state
         dest_state = (-1, -1)
@@ -57,15 +53,15 @@ class Board:
 
         if self.path_validity_check(dest_state):
             return dest_state
-        
+
         return (-1, -1)
-    
+
     def available_moves(self, current_state: (int, int)) -> list:
         valid_moves = []
         for _move in self.moves:
             if self.move_validity(current_state, _move) != (-1, -1):
                 valid_moves.append(_move)
-        
+
         return valid_moves
 
     def update_target(self, position: (int, int)) -> None:
@@ -86,7 +82,7 @@ class Board:
 
                 # update energy
                 plus_energy = self.extra_energy.get(extra_energy_cell[1])
-                
+
                 minus_energy = int(extra_energy_cell[0])
                 energy = plus_energy - minus_energy
 
@@ -95,10 +91,8 @@ class Board:
             elif extra_energy_cell[1] in self.other_notations:
                 return -int(extra_energy_cell[0])
 
-        
         cell_energy_consume = int(self.board[row_index][col_index])
         return -cell_energy_consume
-
 
     def calculate_path_energy(self, moves: list, current_position: (int, int)) -> int:
         total_energy = 0
@@ -107,7 +101,7 @@ class Board:
             energy = self.calculate_energy(position)
             total_energy += energy
             current_position = position
-        
+
         return total_energy
 
     def __str__(self) -> str:
@@ -127,7 +121,43 @@ class Board:
 class Tree:
     def __init__(self):
         self.tree: dict[Board: list[Board]] = dict()
-    
+
+    def All_Target_found(self, Path, Target, current_node):
+        for element in Target:
+            if element != current_node:
+                if element not in Path:
+                    return False
+        return True
+
+    def get_visited_positions(self, initial_position, directions):
+        visited_positions = [initial_position]
+        current_position = initial_position
+
+        for direction in directions:
+            if direction == "R":
+                current_position = (current_position[0], current_position[1] + 1)
+            elif direction == "L":
+                current_position = (current_position[0], current_position[1] - 1)
+            elif direction == "U":
+                current_position = (current_position[0] - 1, current_position[1])
+            elif direction == "D":
+                current_position = (current_position[0] + 1, current_position[1])
+
+            visited_positions.append(current_position)
+
+        return visited_positions
+
+    def Targets_founder(self, Matrix):
+        # Create a dictionary to map positions to the number 0
+        positions_to_numbers = []
+
+        # Iterate over the matrix and find positions of 'T'
+        for i, row in enumerate(Matrix):
+            for j, element in enumerate(row):
+                if 'T' in element:
+                    positions_to_numbers.append((i, j))
+        return positions_to_numbers
+
     def add_edge(self, root: Board, dest: Board):
         if root in self.tree:
             self.tree.get(root).append(dest)
@@ -163,7 +193,7 @@ class Tree:
                     child_node.add_path(_move)
 
                 child_node.add_path(move)
-                
+
                 new_position = current_node.move_validity(curr_pos, move)
                 child_node.current_position = new_position
 
@@ -174,31 +204,26 @@ class Tree:
 
         return None
 
-
-    def bfs(self, root_node: Board, initial_position: (int, int)) -> Board | None:
+    def bfs(self, root_node: Board, initial_position: (int, int), Matrix) -> Board | None:
         queue = deque([root_node])
-        visited = set([root_node])
+        visited = {root_node}
+        Target = self.Targets_founder(Matrix)
 
-        found = 0
-        number_of_target = 2
-        targets = []
         path_energy = {"path": [], "energy": float('-inf')}
 
         while queue:
             current_node = queue.popleft()
 
             curr_pos = current_node.current_position  # (row, col)
-
-
             if 'T' in current_node.board[curr_pos[0]][curr_pos[1]]:
-                consumed_energy = current_node.calculate_path_energy(current_node.path_to_parent, initial_position)
-                print(500 - consumed_energy)
-                if consumed_energy > path_energy.get('energy'):
-                    path_energy['energy'] = consumed_energy
-                    path_energy['path'] = current_node.path_to_parent
+                print(current_node.current_position)
+                if self.All_Target_found(self.get_visited_positions(initial_position, current_node.path_to_parent),
+                                         Target, current_node.current_position):
+                    return current_node.path_to_parent
 
             moves = current_node.available_moves(curr_pos)  # successor function
             for move in moves:
+
                 new_position = current_node.move_validity(curr_pos, move)
 
                 child_node = Board(
@@ -211,43 +236,32 @@ class Tree:
 
                 for _move in current_node.path_to_parent:
                     child_node.add_path(_move)
-                
-                child_node.add_path(move)                
+
+                child_node.add_path(move)
 
                 if child_node not in visited:
                     queue.append(child_node)
                     visited.add(child_node)
-
-            
-
-        return path_energy
-
-
-
+                else:
+                    continue
+        return current_node.path_to_parent
 
 
 matrix = [
-    ['1R', '1' , '1' , '5', '5', '4' , '2C', '1' , '15', '1B'],
-    ['1' , '1' , '5' , '3', '5', '5' , '5' , '4' , '5' , 'X'],
-    ['5' , '1I', '1' , '6', '2', '2' , '2' , '1' , '1' , '1T'],
-    ['X' , 'X' , '1' , '6', '5', '5' , '2' , '1' , '1' , 'X'],
-    ['X' , 'X' , '1' , 'X', 'X', '50', '2' , '1C', '1' , 'X'],
-    ['1' , '1' , '1' , '2', '2', '2T', '2' , '1' , '1' , '1']
+    ['1R', '1', '1', '5', '5', '4', '2C', '1', '15', '1B'],
+    ['1', '1', '5', '3', '5', '5', '5', '4', '5', 'X'],
+    ['5', '1I', '1', '6', '2', '2', '2', '1', '1', '1T'],
+    ['X', 'X', '1', '6', '5', '5', '2', '1', '1', 'X'],
+    ['X', 'X', '1', 'X', 'X', '50', '2', '1C', '1', 'X'],
+    ['1', '1', '1', '2', '2', '2T', '2', '1', '1', '1']
 ]
 
-initial_energy = 500   
+initial_energy = 500
 initial_position = (0, 0)
 
 board = Board(matrix, 6, 10, initial_position, initial_energy)
 
-
-
 tree = Tree()
-result = tree.bfs(board, initial_position)
+result = tree.bfs(board, initial_position, matrix)
 print(result)
-# for res in result:
-#     print(res.path_to_parent)
-#     print(res.energy)
-
-
-
+print(result.energy)
