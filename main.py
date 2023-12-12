@@ -257,6 +257,7 @@ matrix = [
 ]
 
 initial_energy = 500
+
 initial_position = (0, 0)
 
 board = Board(matrix, 6, 10, initial_position, initial_energy)
