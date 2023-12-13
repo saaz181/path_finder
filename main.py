@@ -1,7 +1,5 @@
-from typing import Self
 from collections import deque
-
-
+import time
 # TODO: Posistion class
 
 
@@ -15,7 +13,7 @@ class Board:
 
         self.path_to_parent = []
 
-        self.moves = ['L', 'R', 'U', 'D']
+        self.moves = ['L', 'D', 'R', 'U']
         self.extra_energy = {'C': 10, 'B': 5, 'I': 12}
         self.other_notations = {'R', 'T'}
         self.energy = energy
@@ -119,8 +117,11 @@ class Board:
 
 
 class Tree:
-    def __init__(self):
+
+    def __init__(self, matrix):
         self.tree: dict[Board: list[Board]] = dict()
+        self.Number_Of_Target_Found = 0
+        self.Number_Of_Target = len(self.Targets_founder(matrix))
 
     def All_Target_found(self, Path, Target, current_node):
         for element in Target:
@@ -165,61 +166,60 @@ class Tree:
         else:
             self.tree[root] = [dest]
 
-    def dfs(self, start_node: Board) -> Board | None:
+    def dfs(self, root_node: Board) -> Board | None:
         visited = set()
-        stack = [start_node]
-
-        while stack:
+        visited.add((root_node.current_position))
+        stack = OrderedSet()
+        stack.add(root_node)
+        while stack and self.Number_Of_Target_Found < self.Number_Of_Target:
             current_node = stack.pop()
-            print(current_node)
-
-            curr_pos = current_node.current_position
-            current_node.update_energy(curr_pos)
-
-            if 'T' in current_node.board[curr_pos[0]][curr_pos[1]]:
-                current_node.update_target(curr_pos)
-                return current_node
-
-            moves = current_node.available_moves(curr_pos)
+            print(current_node.current_position)
+            curr_pos = current_node.current_position  # (row, col)
+            moves = current_node.available_moves(curr_pos)  # successor function
+            print(moves)
             for move in moves:
+                new_position = current_node.move_validity(curr_pos, move)
                 child_node = Board(
                     current_node.board,
                     current_node.board_row_size,
                     current_node.board_col_size,
-                    current_node.current_position,
-                    current_node.energy
+                    new_position,
+                    current_node.energy + current_node.calculate_energy(new_position)
                 )
+
                 for _move in current_node.path_to_parent:
                     child_node.add_path(_move)
 
                 child_node.add_path(move)
 
-                new_position = current_node.move_validity(curr_pos, move)
-                child_node.current_position = new_position
+                if 'T' in current_node.board[curr_pos[0]][curr_pos[1]]:
+                    current_node.update_target(current_node.current_position)
+                    print(current_node.path_to_parent)
+                    self.Number_Of_Target_Found += 1
+                    if self.Number_Of_Target_Found >= self.Number_Of_Target:
+                        return current_node
+                    temp = self.dfs(current_node)
+                    current_node.path_to_parent = temp.path_to_parent
+                    current_node.energy = temp.energy
 
-                if child_node not in visited:
-                    stack.append(child_node)
+                if child_node.current_position not in visited:
+                    visited.add(child_node.current_position)
+                    stack.add(child_node)
+                else:
+                    continue
 
-            visited.add(current_node)
+        return current_node
 
-        return None
 
-    def bfs(self, root_node: Board, initial_position: (int, int), Matrix) -> Board | None:
+    def bfs(self, root_node: Board) -> Board | None:
         queue = deque([root_node])
-        visited = {root_node}
-        Target = self.Targets_founder(Matrix)
+        visited = set()
+        visited.add(root_node)
 
-        path_energy = {"path": [], "energy": float('-inf')}
-
-        while queue:
+        while queue and self.Number_Of_Target_Found < self.Number_Of_Target:
             current_node = queue.popleft()
 
             curr_pos = current_node.current_position  # (row, col)
-            if 'T' in current_node.board[curr_pos[0]][curr_pos[1]]:
-                print(current_node.current_position)
-                if self.All_Target_found(self.get_visited_positions(initial_position, current_node.path_to_parent),
-                                         Target, current_node.current_position):
-                    return current_node.path_to_parent
 
             moves = current_node.available_moves(curr_pos)  # successor function
             for move in moves:
@@ -231,7 +231,7 @@ class Tree:
                     current_node.board_row_size,
                     current_node.board_col_size,
                     new_position,
-                    current_node.energy
+                    current_node.energy + current_node.calculate_energy(new_position)
                 )
 
                 for _move in current_node.path_to_parent:
@@ -239,12 +239,37 @@ class Tree:
 
                 child_node.add_path(move)
 
+                if 'T' in current_node.board[curr_pos[0]][curr_pos[1]]:
+                    current_node.update_target(current_node.current_position)
+                    self.Number_Of_Target_Found += 1
+                    if self.Number_Of_Target_Found >= self.Number_Of_Target:
+                        return current_node
+                    temp = self.bfs(current_node)
+                    current_node.path_to_parent = temp.path_to_parent
+                    current_node.energy = temp.energy
+
                 if child_node not in visited:
                     queue.append(child_node)
                     visited.add(child_node)
                 else:
                     continue
-        return current_node.path_to_parent
+
+        return current_node
+
+class OrderedSet:
+    def __init__(self):
+        self.list = []
+
+    def add(self, element):
+        if element not in self.list:
+            self.list.append(element)
+
+    def pop(self):
+        return self.list.pop()
+
+
+
+
 
 
 matrix = [
@@ -261,8 +286,9 @@ initial_energy = 500
 initial_position = (0, 0)
 
 board = Board(matrix, 6, 10, initial_position, initial_energy)
-
-tree = Tree()
-result = tree.bfs(board, initial_position, matrix)
-print(result)
+start = time.time()
+tree = Tree(matrix)
+result = tree.dfs(board)
+print(result.path_to_parent)
 print(result.energy)
+print("time elapsed: {:.2f}s".format(time.time() - start))
