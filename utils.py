@@ -49,11 +49,18 @@ def run_dfs():
     tree = Tree()
 
 
-    if result:
-        print("DFS path:", result.path_to_parent)
-        print("Remaining energy:", result.energy)
-    else:
-        print("No path found.")
+    # if result:
+    #     print("DFS path:", result.path_to_parent)
+    #     print("Remaining energy:", result.energy)
+    # else:
+    #     print("No path found.")
     
 
-run_dfs()
+# run_dfs()
+
+
+a = [('R', 12), ('R', 2), ('R', 4), ('R', 3)]
+
+min_val = min(a, key=lambda x: x[1])[1]
+new_a = list(map(lambda x: (x[0], x[1] - min_val), a))
+print(new_a)

@@ -1,5 +1,6 @@
 from collections import deque
 import time
+import heapq
 # TODO: Posistion class
 
 
@@ -17,6 +18,7 @@ class Board:
         self.extra_energy = {'C': 10, 'B': 5, 'I': 12}
         self.other_notations = {'R', 'T'}
         self.energy = energy
+        # self.cost = cost
 
     def add_path(self, move):
         self.path_to_parent.append(move)
@@ -54,11 +56,18 @@ class Board:
 
         return (-1, -1)
 
-    def available_moves(self, current_state: (int, int)) -> list:
+    def available_moves(self, current_state: (int, int), cost=False) -> list:
         valid_moves = []
         for _move in self.moves:
-            if self.move_validity(current_state, _move) != (-1, -1):
-                valid_moves.append(_move)
+            neighbor = self.move_validity(current_state, _move) 
+            if neighbor != (-1, -1):
+                if cost:
+                    value = self.calculate_energy(neighbor)
+                    valid_moves.append((_move, value))
+                else:
+                    valid_moves.append(_move)
+
+            # min_value = map(lambda x, y: x[1] < y[1], va)    
 
         return valid_moves
 
@@ -76,7 +85,7 @@ class Board:
             if extra_energy_cell[1] in self.extra_energy.keys():
 
                 # remove extra energy from board
-                self.board[row_index][col_index] = extra_energy_cell[0]
+                # self.board[row_index][col_index] = extra_energy_cell[0]
 
                 # update energy
                 plus_energy = self.extra_energy.get(extra_energy_cell[1])
@@ -105,6 +114,10 @@ class Board:
     def __str__(self) -> str:
         row, col = self.current_position
         return self.board[row][col]
+    
+    def __lt__(self, other):
+        return self.energy < other.energy
+
 
     def is_remaining_target(self) -> bool:
         is_T = False
@@ -169,14 +182,18 @@ class Tree:
     def dfs(self, root_node: Board) -> Board | None:
         visited = set()
         visited.add((root_node.current_position))
+
         stack = OrderedSet()
         stack.add(root_node)
+        
         while stack and self.Number_Of_Target_Found < self.Number_Of_Target:
             current_node = stack.pop()
-            print(current_node.current_position)
+            # print(current_node.current_position)
+            
             curr_pos = current_node.current_position  # (row, col)
             moves = current_node.available_moves(curr_pos)  # successor function
-            print(moves)
+            # print(moves)
+            
             for move in moves:
                 new_position = current_node.move_validity(curr_pos, move)
                 child_node = Board(
@@ -194,10 +211,13 @@ class Tree:
 
                 if 'T' in current_node.board[curr_pos[0]][curr_pos[1]]:
                     current_node.update_target(current_node.current_position)
-                    print(current_node.path_to_parent)
+                    
+                    # print(current_node.path_to_parent)
                     self.Number_Of_Target_Found += 1
+                    
                     if self.Number_Of_Target_Found >= self.Number_Of_Target:
                         return current_node
+                    
                     temp = self.dfs(current_node)
                     current_node.path_to_parent = temp.path_to_parent
                     current_node.energy = temp.energy
@@ -241,9 +261,11 @@ class Tree:
 
                 if 'T' in current_node.board[curr_pos[0]][curr_pos[1]]:
                     current_node.update_target(current_node.current_position)
+
                     self.Number_Of_Target_Found += 1
                     if self.Number_Of_Target_Found >= self.Number_Of_Target:
                         return current_node
+                    
                     temp = self.bfs(current_node)
                     current_node.path_to_parent = temp.path_to_parent
                     current_node.energy = temp.energy
@@ -255,6 +277,49 @@ class Tree:
                     continue
 
         return current_node
+
+    def ucs(self, root_node: Board) -> Board:
+        priority_queue = [(-0, root_node)]  # Priority queue with (cost, Board) tuples
+        visited = set()
+
+        while priority_queue:
+            _, current_node = heapq.heappop(priority_queue)
+            # print(current_node)
+            # print(current_node.energy)
+
+            if current_node.current_position in visited:
+                continue
+
+            visited.add(current_node.current_position)
+
+            curr_pos = current_node.current_position
+            moves = current_node.available_moves(curr_pos, cost=True)  # successor
+
+            for move, move_cost in moves:
+                total_cost = current_node.energy + move_cost
+
+                new_position = current_node.move_validity(curr_pos, move)
+                
+                child_node = Board(
+                    current_node.board,
+                    current_node.board_row_size,
+                    current_node.board_col_size,
+                    new_position,
+                    current_node.energy + current_node.calculate_energy(new_position)
+                )
+
+                for _move in current_node.path_to_parent:
+                    child_node.add_path(_move)
+
+                child_node.add_path(move)
+
+                if 'T' in current_node.board[curr_pos[0]][curr_pos[1]]:
+                    current_node.update_target(current_node.current_position)
+                    return current_node
+
+                if new_position not in visited:
+                    heapq.heappush(priority_queue, (-total_cost, child_node))
+
 
 class OrderedSet:
     def __init__(self):
@@ -273,12 +338,12 @@ class OrderedSet:
 
 
 matrix = [
-    ['1R', '1', '1', '5', '5', '4', '2C', '1', '15', '1B'],
-    ['1', '1', '5', '3', '5', '5', '5', '4', '5', 'X'],
-    ['5', '1I', '1', '6', '2', '2', '2', '1', '1', '1T'],
-    ['X', 'X', '1', '6', '5', '5', '2', '1', '1', 'X'],
-    ['X', 'X', '1', 'X', 'X', '50', '2', '1C', '1', 'X'],
-    ['1', '1', '1', '2', '2', '2T', '2', '1', '1', '1']
+    ['1R', '1' , '1' , '5', '5', '4' , '2C', '1' , '15', '1B'],
+    ['1' , '1' , '5' , '3', '5', '5' , '5' , '4' , '5' , 'X'],
+    ['5' , '1I', '1' , '6', '2', '2' , '2' , '1' , '1' , '1T'],
+    ['X' , 'X' , '1' , '6', '5', '5' , '2' , '1' , '1' , 'X'],
+    ['X' , 'X' , '1' , 'X', 'X', '50', '2' , '1C', '1' , 'X'],
+    ['1' , '1' , '1' , '2', '2', '2T', '2' , '1' , '1' , '1']
 ]
 
 initial_energy = 500
@@ -286,9 +351,17 @@ initial_energy = 500
 initial_position = (0, 0)
 
 board = Board(matrix, 6, 10, initial_position, initial_energy)
-start = time.time()
 tree = Tree(matrix)
-result = tree.dfs(board)
-print(result.path_to_parent)
-print(result.energy)
-print("time elapsed: {:.2f}s".format(time.time() - start))
+
+####### UCS #######
+targets = tree.Number_Of_Target
+found_target = 0
+
+initial_board = board
+while found_target != targets:
+    result = tree.ucs(initial_board)
+    found_target += 1
+    initial_board = result
+
+print(initial_board.energy)
+#################################
