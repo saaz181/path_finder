@@ -85,7 +85,7 @@ class Board:
             if extra_energy_cell[1] in self.extra_energy.keys():
 
                 # remove extra energy from board
-                # self.board[row_index][col_index] = extra_energy_cell[0]
+                self.board[row_index][col_index] = extra_energy_cell[0]
 
                 # update energy
                 plus_energy = self.extra_energy.get(extra_energy_cell[1])
@@ -305,7 +305,8 @@ class Tree:
                     current_node.board_row_size,
                     current_node.board_col_size,
                     new_position,
-                    current_node.energy + current_node.calculate_energy(new_position)
+                    total_cost
+                    # current_node.energy + current_node.calculate_energy(new_position)
                 )
 
                 for _move in current_node.path_to_parent:
