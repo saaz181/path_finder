@@ -129,6 +129,46 @@ class Board:
 
         return is_T
 
+    def heuristic(self) -> int:
+        # Define a high value for initial minimum distance
+        min_distance = float('inf')
+        # Get the current position
+        curr_pos = self.current_position
+
+        for i in range(self.board_row_size):
+            for j in range(self.board_col_size):
+                # Check every cell in the board if there's a remaining target
+                if 'T' in self.board[i][j]:
+                    # If there's a target, calculate Manhattan distance
+                    distance = abs(curr_pos[0] - i) + abs(curr_pos[1] - j)
+                    # Update the minimum distance
+                    min_distance = min(min_distance, distance)
+        return min_distance
+
+    def heuristic2(self) -> int:
+        # Define a high value for initial minimum distance
+        min_distance = float('inf')
+        # Define a low value for initial maximum energy
+        max_energy = float('-inf')
+        # Get the current position
+        curr_pos = self.current_position
+
+        for i in range(self.board_row_size):
+            for j in range(self.board_col_size):
+                # Check every cell in the board if there's a remaining target
+                if 'T' in self.board[i][j]:
+                    # If there's a target, calculate Manhattan distance
+                    distance = abs(curr_pos[0] - i) + abs(curr_pos[1] - j)
+                    # Update the minimum distance
+                    min_distance = min(min_distance, distance)
+
+                # Check every cell in the board if there's an energy point
+                if len(self.board[i][j]) > 1 and self.board[i][j][1] in self.extra_energy.keys():
+                    # If there's an energy point, update the maximum energy
+                    max_energy = max(max_energy, self.extra_energy[self.board[i][j][1]])
+
+        # Balance both the distance to target and energy points
+        return min_distance - max_energy
 
 class Tree:
 
@@ -321,6 +361,51 @@ class Tree:
                     continue
         return current_node
 
+    def astar(self, root_node: Board) -> Board:
+        priority_queue = [(-0, root_node)]  # Priority queue with (cost, Board) tuples
+        visited = set()
+
+        while priority_queue and self.Number_Of_Target_Found < self.Number_Of_Target:
+            _, current_node = heapq.heappop(priority_queue)
+            visited.add(current_node.current_position)
+            curr_pos = current_node.current_position
+            moves = current_node.available_moves(curr_pos, cost=True)  # successor
+
+            for move, move_cost in moves:
+                total_cost = current_node.energy + move_cost + current_node.heuristic2()
+                new_position = current_node.move_validity(curr_pos, move)
+                child_node = Board(
+                    current_node.board,
+                    current_node.board_row_size,
+                    current_node.board_col_size,
+                    new_position,
+                    total_cost
+                    # current_node.energy + current_node.calculate_energy(new_position)
+                )
+
+                for _move in current_node.path_to_parent:
+                    child_node.add_path(_move)
+                child_node.add_path(move)
+                child_node.energy = current_node.energy + move_cost
+
+                if 'T' in current_node.board[curr_pos[0]][curr_pos[1]]:
+                    current_node.update_target(current_node.current_position)
+
+                    self.Number_Of_Target_Found += 1
+                    if self.Number_Of_Target_Found >= self.Number_Of_Target:
+                        return current_node
+
+                    temp = self.ucs(current_node)
+                    current_node.path_to_parent = temp.path_to_parent
+                    current_node.energy = temp.energy
+
+                if new_position not in visited:
+                    heapq.heappush(priority_queue, (-total_cost, child_node))
+                else:
+                    continue
+        return current_node
+
+
 
 class OrderedSet:
     def __init__(self):
@@ -352,7 +437,6 @@ tree = Tree(matrix)
 result = tree.bfs(board)
 print(result.path_to_parent)
 print(result.energy)
-
 ####### DFS #######
 matrix = [
     ['1R', '1', '1', '5', '5', '4', '2C', '1', '15', '1B'],
@@ -382,6 +466,26 @@ matrix = [
 print("UCS = ")
 board3 = Board(matrix, 6, 10, initial_position, initial_energy)
 tree3 = Tree(matrix)
+start = time.time()
 result3 = tree3.ucs(board3)
 print(result3.path_to_parent)
 print(result3.energy)
+print("time elapsed: {:.2f}s".format(time.time() - start))
+
+####### َA* #######
+matrix = [
+    ['1R', '1', '1', '5', '5', '4', '2C', '1', '15', '1B'],
+    ['1', '1', '5', '3', '5', '5', '5', '4', '5', 'X'],
+    ['5', '1I', '1', '6', '2', '2', '2', '1', '1', '1T'],
+    ['X', 'X', '1', '6', '5', '5', '2', '1', '1', 'X'],
+    ['X', 'X', '1', 'X', 'X', '50', '2', '1C', '1', 'X'],
+    ['1', '1', '1', '2', '2', '2T', '2', '1', '1', '1']
+]
+print("َA* = ")
+board4 = Board(matrix, 6, 10, initial_position, initial_energy)
+tree4 = Tree(matrix)
+start = time.time()
+result = tree4.astar(board4)
+print(result.path_to_parent)
+print(result.energy)
+print("time elapsed: {:.2f}s".format(time.time() - start))
