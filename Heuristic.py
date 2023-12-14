@@ -1,7 +1,7 @@
 # Saving Heuristic functions:
 def manhattan_distance(self,currposition, target):
-    x1, y1 = position1
-    x2, y2 = position2
+    x1, y1 = currposition
+    x2, y2 = target
     return abs(x1 - x2) + abs(y1 - y2)
 
 def heuristic(self,cell ) :
