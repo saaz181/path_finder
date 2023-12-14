@@ -1,7 +1,7 @@
 from collections import deque
 import time
 import heapq
-
+import hashlib
 
 # TODO: Posistion class
 
@@ -319,11 +319,11 @@ class Tree:
 
     def ucs(self, root_node: Board) -> Board:
         priority_queue = [(-0, root_node)]  # Priority queue with (cost, Board) tuples
-        visited = set()
+        visited = {}
 
         while priority_queue and self.Number_Of_Target_Found < self.Number_Of_Target:
             _, current_node = heapq.heappop(priority_queue)
-            visited.add(current_node.current_position)
+            visited[current_node.current_position] = current_node.energy
             curr_pos = current_node.current_position
             moves = current_node.available_moves(curr_pos, cost=True)  # successor
 
@@ -344,6 +344,16 @@ class Tree:
 
                 child_node.add_path(move)
 
+                if child_node.current_position not in visited:
+                    heapq.heappush(priority_queue, (-total_cost, child_node))
+                    visited[child_node.current_position] = child_node.energy
+                elif child_node.current_position in visited:
+                    if child_node.energy >= visited[child_node.current_position]:
+                        heapq.heappush(priority_queue, (-total_cost, child_node))
+                        visited[child_node.current_position] = child_node.energy
+                else:
+                    continue
+
                 if 'T' in current_node.board[curr_pos[0]][curr_pos[1]]:
                     current_node.update_target(current_node.current_position)
 
@@ -355,24 +365,21 @@ class Tree:
                     current_node.path_to_parent = temp.path_to_parent
                     current_node.energy = temp.energy
 
-                if new_position not in visited:
-                    heapq.heappush(priority_queue, (-total_cost, child_node))
-                else:
-                    continue
+
         return current_node
 
     def astar(self, root_node: Board) -> Board:
         priority_queue = [(-0, root_node)]  # Priority queue with (cost, Board) tuples
-        visited = set()
+        visited = {}
 
         while priority_queue and self.Number_Of_Target_Found < self.Number_Of_Target:
             _, current_node = heapq.heappop(priority_queue)
-            visited.add(current_node.current_position)
+            visited[current_node.current_position] = current_node.energy
             curr_pos = current_node.current_position
             moves = current_node.available_moves(curr_pos, cost=True)  # successor
 
             for move, move_cost in moves:
-                total_cost = current_node.energy + move_cost + current_node.heuristic2()
+                total_cost = current_node.energy + move_cost + current_node.heuristic()
                 new_position = current_node.move_validity(curr_pos, move)
                 child_node = Board(
                     current_node.board,
@@ -388,6 +395,16 @@ class Tree:
                 child_node.add_path(move)
                 child_node.energy = current_node.energy + move_cost
 
+                if child_node.current_position not in visited:
+                    heapq.heappush(priority_queue, (-total_cost, child_node))
+                    visited[child_node.current_position] = child_node.energy
+                elif child_node.current_position in visited:
+                    if child_node.energy >= visited[child_node.current_position]:
+                        heapq.heappush(priority_queue, (-total_cost, child_node))
+                        visited[child_node.current_position] = child_node.energy
+                else:
+                    continue
+
                 if 'T' in current_node.board[curr_pos[0]][curr_pos[1]]:
                     current_node.update_target(current_node.current_position)
 
@@ -395,14 +412,10 @@ class Tree:
                     if self.Number_Of_Target_Found >= self.Number_Of_Target:
                         return current_node
 
-                    temp = self.ucs(current_node)
+                    temp = self.astar(current_node)
                     current_node.path_to_parent = temp.path_to_parent
                     current_node.energy = temp.energy
 
-                if new_position not in visited:
-                    heapq.heappush(priority_queue, (-total_cost, child_node))
-                else:
-                    continue
         return current_node
 
 
@@ -456,12 +469,12 @@ print(result2.energy)
 
 ####### UCS #######
 matrix = [
-    ['1R', '1', '1', '5', '5', '4', '2C', '1', '15', '1B'],
-    ['1', '1', '5', '3', '5', '5', '5', '4', '5', 'X'],
-    ['5', '1I', '1', '6', '2', '2', '2', '1', '1', '1T'],
-    ['X', 'X', '1', '6', '5', '5', '2', '1', '1', 'X'],
-    ['X', 'X', '1', 'X', 'X', '50', '2', '1C', '1', 'X'],
-    ['1', '1', '1', '2', '2', '2T', '2', '1', '1', '1']
+    ['1R', '1', 'X', '5T', '5', '4', '2C', '1', '15', '1B'],
+    ['1', '1', '5', '30', '5', '5', '5', 'X', 'X', 'X'],
+    ['X', 'X', '1', 'X', 'X', '2', '2', 'X', '1', '1T'],
+    ['2I', '5', '1', '6', '5', '5', '2', '1', '1', 'X'],
+    ['X', 'X', 'X', 'X', 'X', '50', '2', '1C', 'X', 'X'],
+    ['1I', '1', '1T', '2', '2', '2T', '2', '1', '1', '1']
 ]
 print("UCS = ")
 board3 = Board(matrix, 6, 10, initial_position, initial_energy)
@@ -474,13 +487,14 @@ print("time elapsed: {:.2f}s".format(time.time() - start))
 
 ####### َA* #######
 matrix = [
-    ['1R', '1', '1', '5', '5', '4', '2C', '1', '15', '1B'],
-    ['1', '1', '5', '3', '5', '5', '5', '4', '5', 'X'],
-    ['5', '1I', '1', '6', '2', '2', '2', '1', '1', '1T'],
-    ['X', 'X', '1', '6', '5', '5', '2', '1', '1', 'X'],
-    ['X', 'X', '1', 'X', 'X', '50', '2', '1C', '1', 'X'],
-    ['1', '1', '1', '2', '2', '2T', '2', '1', '1', '1']
+    ['1R', '1', 'X', '5T', '5', '4', '2C', '1', '15', '1B'],
+    ['1', '1', '5', '30', '5', '5', '5', 'X', 'X', 'X'],
+    ['X', 'X', '1', 'X', 'X', '2', '2', 'X', '1', '1T'],
+    ['2I', '5', '1', '6', '5', '5', '2', '1', '1', 'X'],
+    ['X', 'X', 'X', 'X', 'X', '50', '2', '1C', 'X', 'X'],
+    ['1I', '1', '1T', '2', '2', '2T', '2', '1', '1', '1']
 ]
+
 print("َA* = ")
 board4 = Board(matrix, 6, 10, initial_position, initial_energy)
 tree4 = Tree(matrix)
