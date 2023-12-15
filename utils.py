@@ -1,4 +1,5 @@
 from main import Board, Tree
+import time
 
 matrix = [
     ['1R', '1' , '1' , '5', '5', '4' , '2C', '1' , '15', '1B'],
@@ -11,56 +12,34 @@ matrix = [
 
 initial_energy = 500   
 initial_position = (0, 0)
-    
 
 
 def run_bfs():
-    global matrix, initial_energy, initial_position
-    
-    found_targets = 0
-    targets = 2
-    final_hit = None
-    path = []
-
-    while found_targets != targets:
-
-        board = Board(matrix, 6, 10, initial_position, initial_energy)
-        tree = Tree()
-        result = tree.bfs(board)
-
-        if result is not None:
-            found_targets += 1
-            initial_position = result.current_position
-            initial_energy = result.energy
-            matrix = result.board
-            final_hit = result
-            for move in result.path_to_parent:
-                path.append(move)
-    
-    print(f"{final_hit.energy} - {''.join(path)}")
-    # print(final_hit.energy)
-    
+    matrix = [
+        ['1R', '1', 'X', '5T', '5', '4', '2C', '1', '15', '1B'],
+        ['1', '1', '5', '30', '5', '5', '5', 'X', 'X', 'X'],
+        ['X', 'X', '1', 'X', 'X', '2', '2', 'X', '1', '1T'],
+        ['2I', '5', '1', '6', '5', '5', '2', '1', '1', 'X'],
+        ['X', 'X', 'X', 'X', 'X', '50', '2', '1C', 'X', 'X'],
+        ['1I', '1', '1T', '2', '2', '2T', '2', '1', '1', '1']
+    ]
+    print("BFS = ")
+    board = Board(matrix, 6, 10, initial_position, initial_energy)
+    tree = Tree(matrix)
+    start = time.time()
+    result = tree.bfs(board)
+    print(result.path_to_parent)
+    print(result.energy)
+    print("time elapsed: {:.2f}s".format(time.time() - start))
 
 def run_dfs():
-    global matrix, initial_energy, initial_position
+    pass
 
-    board = Board(matrix, 6, 10, initial_position, initial_energy)
+def run_ids():
+    pass
 
-    tree = Tree()
+def run_ucs():
+    pass
 
-
-    # if result:
-    #     print("DFS path:", result.path_to_parent)
-    #     print("Remaining energy:", result.energy)
-    # else:
-    #     print("No path found.")
-    
-
-# run_dfs()
-
-
-a = [('R', 12), ('R', 2), ('R', 4), ('R', 3)]
-
-min_val = min(a, key=lambda x: x[1])[1]
-new_a = list(map(lambda x: (x[0], x[1] - min_val), a))
-print(new_a)
+def run_A_star():
+    pass
