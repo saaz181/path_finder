@@ -109,7 +109,7 @@ class Board:
 
         cell_energy_consume = int(self.board[row_index][col_index])
         return -cell_energy_consume
-
+    
     def calculate_path_energy(self, moves: list, current_position: (int, int)) -> int:
         total_energy = 0
         for move in moves:
@@ -137,21 +137,29 @@ class Board:
         return is_T    
 
     def heuristic(self, matrix) -> int:
-        heuristic = {}
+        heuristic = dict()
         for i in range(len(matrix)):
             for j in range(len(matrix[i])):
                 distances = []
+                targets = []
                 curr_pos = (i, j)
-                element = matrix[i][j]
                 for row in range(self.board_row_size):
                     for col in range(self.board_col_size):
                         if len(self.board[row][col]) > 1 and self.board[row][col][1] in self.extra_energy.keys():
                             distance = np.sqrt((curr_pos[0] - row) ** 2 + (curr_pos[1] - col) ** 2)
                             distances.append(distance)
+                        if 'T' in self.board[row][col]:
+                            target = np.sqrt((curr_pos[0] - row) ** 2 + (curr_pos[1] - col) ** 2)
+                            targets.append(target)
+
                 if len(distances) == 0:
                     return np.inf
-                avg_distance = np.mean(distances)
-                heuristic[curr_pos] = avg_distance
+                if len(targets) == 0:
+                    return np.inf
+                
+                min_distance = np.min(distances)
+                min_target = np.min(targets)
+                heuristic[curr_pos] = -min_distance - min_target
         return heuristic
     
 
@@ -302,7 +310,6 @@ class Tree:
                 return result
             depth_limit += 1
 
-
     def _recursive_dls(self, current_node: Board, depth_limit: int, visited: dict) -> Board | None:
         if depth_limit == 0:
             return None  # Reached depth limit, no solution found at this level
@@ -349,7 +356,6 @@ class Tree:
                 return result
 
         return None  # No solution found at this level
-
 
     def ucs(self, root_node: Board) -> Board:
         priority_queue = [(-0, root_node)]  # Priority queue with (cost, Board) tuples
@@ -428,7 +434,8 @@ class Tree:
                 for _move in current_node.path_to_parent:
                     child_node.add_path(_move)
                 child_node.add_path(move)
-                child_node.energy = current_node.energy + move_cost
+
+                # child_node.energy = current_node.energy + move_cost
 
                 if child_node.current_position not in visited:
                     heapq.heappush(priority_queue, (-total_cost, child_node))
@@ -455,14 +462,15 @@ class Tree:
 
         return current_node
 
-
     def best_first_search(self, root_node: Board, heuristic_dic: dict) -> Board:
         priority_queue = [(-0, root_node)]  # Priority queue with (cost, Board) tuples
         visited = {}
 
         while priority_queue and self.found_targets < self.targets:
             _, current_node = heapq.heappop(priority_queue)
+            
             visited[current_node.current_position] = current_node.energy
+            
             curr_pos = current_node.current_position
             moves = current_node.available_moves(curr_pos, cost=True)  # successor
 
@@ -480,7 +488,8 @@ class Tree:
                 for _move in current_node.path_to_parent:
                     child_node.add_path(_move)
                 child_node.add_path(move)
-                child_node.energy = current_node.energy + move_cost
+                
+                # child_node.energy = current_node.energy + move_cost
 
                 if child_node.current_position not in visited:
                     heapq.heappush(priority_queue, (-total_cost, child_node))

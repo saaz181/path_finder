@@ -1,10 +1,43 @@
 from main import Board, Tree
 import time
+import copy
+
+
+
+
+# getting user input
+def get_input():
+    """
+    Function to get the input from the user
+    """
+
+    targetN = 0
+    x, y = map(int, input().split())
+    input_matrix = []
+    
+    # preparing the matrix
+    for i in range(x):
+        value = list(input().split())
+    
+        for i in value:
+            if 'T' in i:
+                targetN +=1
+    
+        input_matrix.append(value)
+    # our default energy
+    
+    energy = 500
+    return input_matrix, energy ,targetN
+
 
 
 def run_bfs(matrix: list[list], row_size: int, col_size: int, position: (int, int), energy: int) -> None:
     print("\n############ BFS ############")
     
+    s_row, s_col = position
+    start_point = int(matrix[s_row][s_col].replace('R', ''))
+    energy -= start_point
+
     board = Board(matrix, row_size, col_size, position, energy)
     tree = Tree(matrix)
 
@@ -25,6 +58,10 @@ def run_bfs(matrix: list[list], row_size: int, col_size: int, position: (int, in
 
 def run_dfs(matrix: list[list], row_size: int, col_size: int, position: (int, int), energy: int):
     print("\n############ DFS ############")
+
+    s_row, s_col = position
+    start_point = int(matrix[s_row][s_col].replace('R', ''))
+    energy -= start_point
     
     board = Board(matrix, row_size, col_size, position, energy)
     tree = Tree(matrix)
@@ -47,6 +84,10 @@ def run_dfs(matrix: list[list], row_size: int, col_size: int, position: (int, in
 
 def run_ids(matrix: list[list], row_size: int, col_size: int, position: (int, int), energy: int, max_depth: int):
     print("############ IDS ############")
+
+    s_row, s_col = position
+    start_point = int(matrix[s_row][s_col].replace('R', ''))
+    energy -= start_point
     
     board = Board(matrix, row_size, col_size, position, energy)
     tree = Tree(matrix)
@@ -76,6 +117,10 @@ def run_ids(matrix: list[list], row_size: int, col_size: int, position: (int, in
 def run_ucs(matrix: list[list], row_size: int, col_size: int, position: (int, int), energy: int):
     print("\n############ UCS ############")
     
+    s_row, s_col = position
+    start_point = int(matrix[s_row][s_col].replace('R', ''))
+    energy -= start_point
+
     board = Board(matrix, row_size, col_size, position, energy)
     tree = Tree(matrix)
 
@@ -94,8 +139,16 @@ def run_ucs(matrix: list[list], row_size: int, col_size: int, position: (int, in
 
 def run_A_star(matrix: list[list], row_size: int, col_size: int, position: (int, int), energy: int):
     print("\n############ A* ############")
+
+    s_row, s_col = position
+    start_point = int(matrix[s_row][s_col].replace('R', ''))
+    energy -= start_point
+
+    matrix_2 = copy.deepcopy(matrix)
     
     board = Board(matrix, row_size, col_size, position, energy)
+    board1 = Board(matrix_2, row_size, col_size, position, energy)
+    
     tree = Tree(matrix)
 
     start = time.time()
@@ -104,7 +157,8 @@ def run_A_star(matrix: list[list], row_size: int, col_size: int, position: (int,
     end = time.time()
 
     if tree.all_targets_found(astar_result.path_to_parent, tree.target_numerator(matrix), position):
-        print(f"{astar_result.energy}, {''.join(astar_result.path_to_parent)}")
+        energy_astar = board1.calculate_path_energy(astar_result.path_to_parent, position)
+        print(f"{energy + energy_astar}, {''.join(astar_result.path_to_parent)}")
     else:
         print("There is no route!!!")
 
@@ -115,8 +169,15 @@ def run_A_star(matrix: list[list], row_size: int, col_size: int, position: (int,
 
 def run_best_first_search(matrix: list[list], row_size: int, col_size: int, position: (int, int), energy: int):
     print("\n############ Best First Search ############")
+
+    s_row, s_col = position
+    start_point = int(matrix[s_row][s_col].replace('R', ''))
+    energy -= start_point
     
+    matrix_3 = copy.deepcopy(matrix)
+
     board = Board(matrix, row_size, col_size, position, energy)
+    board2 = Board(matrix_3, row_size, col_size, position, energy)
     tree = Tree(matrix)
 
     start = time.time()
@@ -125,7 +186,9 @@ def run_best_first_search(matrix: list[list], row_size: int, col_size: int, posi
     end = time.time()
 
     if tree.all_targets_found(best_first_search_result.path_to_parent, tree.target_numerator(matrix), position):
-        print(f"{best_first_search_result.energy}, {''.join(best_first_search_result.path_to_parent)}")
+        energy_best_first_search = board2.calculate_path_energy(best_first_search_result.path_to_parent, position)
+        print(f"{energy + energy_best_first_search}, {''.join(best_first_search_result.path_to_parent)}")
+    
     else:
         print("There is no route!!!")
 
@@ -135,6 +198,14 @@ def run_best_first_search(matrix: list[list], row_size: int, col_size: int, posi
 
 
 if __name__ == '__main__':
+
+    # default_input = input('Do you want to use default matrix? (Y/N)')
+
+    # if default_input == 'N':
+    #     d_matrix, _, _ = get_input()
+
+    
+
     matrix_bfs = [
     ['1R', '1' , '1' , '5', '5', '4' , '2C', '1' , '15', '1B'],
     ['1' , '1' , '5' , '3', '5', '5' , '5' , '4' , '5' , 'X'],
@@ -212,6 +283,7 @@ if __name__ == '__main__':
     
     initial_energy = 500   
     initial_position = (0, 0)
+    
     
     run_bfs(matrix_bfs, board_row_size_bfs, board_col_size_bfs, initial_position, initial_energy)
     run_dfs(matrix_dfs, board_row_size_dfs, board_col_size_dfs, initial_position, initial_energy)
