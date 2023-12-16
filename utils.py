@@ -27,7 +27,7 @@ def get_input():
     # our default energy
     
     energy = 500
-    return input_matrix, energy ,targetN
+    return input_matrix, x, y
 
 
 
@@ -199,91 +199,102 @@ def run_best_first_search(matrix: list[list], row_size: int, col_size: int, posi
 
 if __name__ == '__main__':
 
-    # default_input = input('Do you want to use default matrix? (Y/N)')
+    default_input = input('Do you want to use default matrix? (Y/N): ')
 
-    # if default_input == 'N':
-    #     d_matrix, _, _ = get_input()
+    if default_input == 'N':
+        d_matrix, row_size, col_size = get_input()
 
+        matrix_bfs = copy.deepcopy(d_matrix)
+        matrix_dfs = copy.deepcopy(d_matrix)
+        matrix_ids = copy.deepcopy(d_matrix)
+        max_depth_limit = 12
+
+        matrix_ucs = copy.deepcopy(d_matrix)
+        matrix_astar = copy.deepcopy(d_matrix)
+        matrix_best_first_search = copy.deepcopy(d_matrix)
+
+        board_row_size_bfs = board_row_size_dfs = board_row_size_ids = board_row_size_ucs = board_row_size_astar = board_row_size_best_first_search = row_size - 1
+        board_col_size_bfs = board_col_size_dfs = board_col_size_ids = board_col_size_ucs = board_col_size_astar = board_col_size_best_first_search = col_size - 1
     
-
-    matrix_bfs = [
-    ['1R', '1' , '1' , '5', '5', '4' , '2C', '1' , '15', '1B'],
-    ['1' , '1' , '5' , '3', '5', '5' , '5' , '4' , '5' , 'X'],
-    ['5' , '1I', '1' , '6', '2', '2' , '2' , '1' , '1' , '1T'],
-    ['X' , 'X' , '1' , '6', '5', '5' , '2' , '1' , '1' , 'X'],
-    ['X' , 'X' , '1' , 'X', 'X', '50', '2' , '1C', '1' , 'X'],
-    ['1' , '1' , '1' , '2', '2', '2T', '2' , '1' , '1' , '1']
-]
-
-    board_row_size_bfs = len(matrix_bfs)
-    board_col_size_bfs = len(matrix_bfs[0]) 
-
     
-    matrix_dfs = [
-    ['1R', '1' , '1' , '5', '5', '4' , '2C', '1' , '15', '1B'],
-    ['1' , '1' , '5' , '3', '5', '5' , '5' , '4' , '5' , 'X'],
-    ['5' , '1I', '1' , '6', '2', '2' , '2' , '1' , '1' , '1T'],
-    ['X' , 'X' , '1' , '6', '5', '5' , '2' , '1' , '1' , 'X'],
-    ['X' , 'X' , '1' , 'X', 'X', '50', '2' , '1C', '1' , 'X'],
-    ['1' , '1' , '1' , '2', '2', '2T', '2' , '1' , '1' , '1']
-]
+    else:
+        matrix_bfs = [
+        ['1R', '1' , '1' , '5', '5', '4' , '2C', '1' , '15', '1B'],
+        ['1' , '1' , '5' , '3', '5', '5' , '5' , '4' , '5' , 'X'],
+        ['5' , '1I', '1' , '6', '2', '2' , '2' , '1' , '1' , '1T'],
+        ['X' , 'X' , '1' , '6', '5', '5' , '2' , '1' , '1' , 'X'],
+        ['X' , 'X' , '1' , 'X', 'X', '50', '2' , '1C', '1' , 'X'],
+        ['1' , '1' , '1' , '2', '2', '2T', '2' , '1' , '1' , '1']
+    ]
 
-    board_row_size_dfs = len(matrix_dfs)
-    board_col_size_dfs = len(matrix_dfs[0]) 
- 
-    matrix_ids = [
-    ['1R', '1' , '1' , '5', '5', '4' , '2C', '1' , '15', '1B'],
-    ['1' , '1' , '5' , '3', '5', '5' , '5' , '4' , '5' , 'X'],
-    ['5' , '1I', '1' , '6', '2', '2' , '2' , '1' , '1' , '1T'],
-    ['X' , 'X' , '1' , '6', '5', '5' , '2' , '1' , '1' , 'X'],
-    ['X' , 'X' , '1' , 'X', 'X', '50', '2' , '1C', '1' , 'X'],
-    ['1' , '1' , '1' , '2', '2', '2T', '2' , '1' , '1' , '1']
-]
+        board_row_size_bfs = len(matrix_bfs)
+        board_col_size_bfs = len(matrix_bfs[0]) 
 
-    board_row_size_ids = len(matrix_ids)
-    board_col_size_ids = len(matrix_ids[0])
-    max_depth_limit = 12
+        
+        matrix_dfs = [
+        ['1R', '1' , '1' , '5', '5', '4' , '2C', '1' , '15', '1B'],
+        ['1' , '1' , '5' , '3', '5', '5' , '5' , '4' , '5' , 'X'],
+        ['5' , '1I', '1' , '6', '2', '2' , '2' , '1' , '1' , '1T'],
+        ['X' , 'X' , '1' , '6', '5', '5' , '2' , '1' , '1' , 'X'],
+        ['X' , 'X' , '1' , 'X', 'X', '50', '2' , '1C', '1' , 'X'],
+        ['1' , '1' , '1' , '2', '2', '2T', '2' , '1' , '1' , '1']
+    ]
 
-    matrix_ucs = [
-    ['1R', '1' , '1' , '5', '5', '4' , '2C', '1' , '15', '1B'],
-    ['1' , '1' , '5' , '3', '5', '5' , '5' , '4' , '5' , 'X'],
-    ['5' , '1I', '1' , '6', '2', '2' , '2' , '1' , '1' , '1T'],
-    ['X' , 'X' , '1' , '6', '5', '5' , '2' , '1' , '1' , 'X'],
-    ['X' , 'X' , '1' , 'X', 'X', '50', '2' , '1C', '1' , 'X'],
-    ['1' , '1' , '1' , '2', '2', '2T', '2' , '1' , '1' , '1']
-]
+        board_row_size_dfs = len(matrix_dfs)
+        board_col_size_dfs = len(matrix_dfs[0]) 
+    
+        matrix_ids = [
+        ['1R', '1' , '1' , '5', '5', '4' , '2C', '1' , '15', '1B'],
+        ['1' , '1' , '5' , '3', '5', '5' , '5' , '4' , '5' , 'X'],
+        ['5' , '1I', '1' , '6', '2', '2' , '2' , '1' , '1' , '1T'],
+        ['X' , 'X' , '1' , '6', '5', '5' , '2' , '1' , '1' , 'X'],
+        ['X' , 'X' , '1' , 'X', 'X', '50', '2' , '1C', '1' , 'X'],
+        ['1' , '1' , '1' , '2', '2', '2T', '2' , '1' , '1' , '1']
+    ]
 
-    board_row_size_ucs = len(matrix_ucs)
-    board_col_size_ucs = len(matrix_ucs[0]) 
+        board_row_size_ids = len(matrix_ids)
+        board_col_size_ids = len(matrix_ids[0])
+        max_depth_limit = 12
 
-    matrix_astar = [
-    ['1R', '1' , '1' , '5', '5', '4' , '2C', '1' , '15', '1B'],
-    ['1' , '1' , '5' , '3', '5', '5' , '5' , '4' , '5' , 'X'],
-    ['5' , '1I', '1' , '6', '2', '2' , '2' , '1' , '1' , '1T'],
-    ['X' , 'X' , '1' , '6', '5', '5' , '2' , '1' , '1' , 'X'],
-    ['X' , 'X' , '1' , 'X', 'X', '50', '2' , '1C', '1' , 'X'],
-    ['1' , '1' , '1' , '2', '2', '2T', '2' , '1' , '1' , '1']
-]
+        matrix_ucs = [
+        ['1R', '1' , '1' , '5', '5', '4' , '2C', '1' , '15', '1B'],
+        ['1' , '1' , '5' , '3', '5', '5' , '5' , '4' , '5' , 'X'],
+        ['5' , '1I', '1' , '6', '2', '2' , '2' , '1' , '1' , '1T'],
+        ['X' , 'X' , '1' , '6', '5', '5' , '2' , '1' , '1' , 'X'],
+        ['X' , 'X' , '1' , 'X', 'X', '50', '2' , '1C', '1' , 'X'],
+        ['1' , '1' , '1' , '2', '2', '2T', '2' , '1' , '1' , '1']
+    ]
 
-    board_row_size_astar = len(matrix_astar)
-    board_col_size_astar = len(matrix_astar[0]) 
+        board_row_size_ucs = len(matrix_ucs)
+        board_col_size_ucs = len(matrix_ucs[0]) 
 
-    matrix_best_first_search = [
-    ['1R', '1' , '1' , '5', '5', '4' , '2C', '1' , '15', '1B'],
-    ['1' , '1' , '5' , '3', '5', '5' , '5' , '4' , '5' , 'X'],
-    ['5' , '1I', '1' , '6', '2', '2' , '2' , '1' , '1' , '1T'],
-    ['X' , 'X' , '1' , '6', '5', '5' , '2' , '1' , '1' , 'X'],
-    ['X' , 'X' , '1' , 'X', 'X', '50', '2' , '1C', '1' , 'X'],
-    ['1' , '1' , '1' , '2', '2', '2T', '2' , '1' , '1' , '1']
-]
+        matrix_astar = [
+        ['1R', '1' , '1' , '5', '5', '4' , '2C', '1' , '15', '1B'],
+        ['1' , '1' , '5' , '3', '5', '5' , '5' , '4' , '5' , 'X'],
+        ['5' , '1I', '1' , '6', '2', '2' , '2' , '1' , '1' , '1T'],
+        ['X' , 'X' , '1' , '6', '5', '5' , '2' , '1' , '1' , 'X'],
+        ['X' , 'X' , '1' , 'X', 'X', '50', '2' , '1C', '1' , 'X'],
+        ['1' , '1' , '1' , '2', '2', '2T', '2' , '1' , '1' , '1']
+    ]
 
-    board_row_size_best_first_search = len(matrix_best_first_search)
-    board_col_size_best_first_search = len(matrix_best_first_search[0]) 
+        board_row_size_astar = len(matrix_astar)
+        board_col_size_astar = len(matrix_astar[0]) 
+
+        matrix_best_first_search = [
+        ['1R', '1' , '1' , '5', '5', '4' , '2C', '1' , '15', '1B'],
+        ['1' , '1' , '5' , '3', '5', '5' , '5' , '4' , '5' , 'X'],
+        ['5' , '1I', '1' , '6', '2', '2' , '2' , '1' , '1' , '1T'],
+        ['X' , 'X' , '1' , '6', '5', '5' , '2' , '1' , '1' , 'X'],
+        ['X' , 'X' , '1' , 'X', 'X', '50', '2' , '1C', '1' , 'X'],
+        ['1' , '1' , '1' , '2', '2', '2T', '2' , '1' , '1' , '1']
+    ]
+
+        board_row_size_best_first_search = len(matrix_best_first_search)
+        board_col_size_best_first_search = len(matrix_best_first_search[0]) 
 
     
     initial_energy = 500   
     initial_position = (0, 0)
-    
     
     run_bfs(matrix_bfs, board_row_size_bfs, board_col_size_bfs, initial_position, initial_energy)
     run_dfs(matrix_dfs, board_row_size_dfs, board_col_size_dfs, initial_position, initial_energy)
