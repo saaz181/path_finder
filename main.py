@@ -86,11 +86,8 @@ class Board:
 
     def calculate_energy(self, position: (int, int)) -> None:
         row_index, col_index = position
-
         extra_energy_cell: str = self.board[row_index][col_index]
-
         if len(extra_energy_cell) > 1:
-
             if extra_energy_cell[1] in self.extra_energy.keys():
 
                 # remove extra energy from board
@@ -134,32 +131,30 @@ class Board:
                 if 'T' in j:
                     is_T = True
 
-        return is_T    
+        return is_T
 
-    def heuristic(self, matrix) -> int:
-        heuristic = dict()
-        for i in range(len(matrix)):
-            for j in range(len(matrix[i])):
-                distances = []
-                targets = []
-                curr_pos = (i, j)
-                for row in range(self.board_row_size):
-                    for col in range(self.board_col_size):
-                        if len(self.board[row][col]) > 1 and self.board[row][col][1] in self.extra_energy.keys():
-                            distance = np.sqrt((curr_pos[0] - row) ** 2 + (curr_pos[1] - col) ** 2)
-                            distances.append(distance)
-                        if 'T' in self.board[row][col]:
-                            target = np.sqrt((curr_pos[0] - row) ** 2 + (curr_pos[1] - col) ** 2)
-                            targets.append(target)
+    def heuristic(self) -> int:
+        distances = []
+        targets = []
+        curr_pos = self.current_position
+        #print(curr_pos)
+        for row in range(self.board_row_size):
+            for col in range(self.board_col_size):
+                if len(self.board[row][col]) > 1 and self.board[row][col][1] in self.extra_energy.keys():
+                    distance = np.absolute((curr_pos[0] - row)  + (curr_pos[1] - col))
+                    distances.append(distance)
+                if 'T' in self.board[row][col]:
+                    target = np.absolute((curr_pos[0] - row) + (curr_pos[1] - col))
+                    targets.append(target)
 
-                if len(distances) == 0:
-                    return np.inf
-                if len(targets) == 0:
-                    return np.inf
-                
-                min_distance = np.min(distances)
-                min_target = np.min(targets)
-                heuristic[curr_pos] = -min_distance - min_target
+        min_distance = 0
+        min_target = 0
+        if len(distances) != 0:
+            min_distance = np.min(distances)
+        if len(targets) != 0:
+            min_target = np.min(targets)
+
+        heuristic = -min_distance - min_target
         return heuristic
     
 
@@ -407,7 +402,7 @@ class Tree:
 
         return current_node
 
-    def astar(self, root_node: Board, heuristic_dic: dict) -> Board:
+    def astar(self, root_node: Board) -> Board:
         priority_queue = [(-0, root_node)]  # Priority queue with (cost, Board) tuples
         visited = {}
 
@@ -420,7 +415,7 @@ class Tree:
             moves = current_node.available_moves(curr_pos, cost=True)  # successor
 
             for move, move_cost in moves:
-                total_cost = current_node.energy + move_cost + heuristic_dic.get(current_node.current_position, 0)
+                total_cost = current_node.energy + move_cost + current_node.heuristic()
                 new_position = current_node.move_validity(curr_pos, move)
                 
                 child_node = Board(
@@ -443,7 +438,7 @@ class Tree:
                 
                 elif child_node.current_position in visited:
                 
-                    if child_node.energy >= visited[child_node.current_position]:
+                    if child_node.energy > visited[child_node.current_position]:
                         heapq.heappush(priority_queue, (-total_cost, child_node))
                         visited[child_node.current_position] = child_node.energy
                 else:
@@ -456,13 +451,13 @@ class Tree:
                     if self.found_targets >= self.targets:
                         return current_node
 
-                    temp = self.astar(current_node, heuristic_dic)
+                    temp = self.astar(current_node)
                     current_node.path_to_parent = temp.path_to_parent
                     current_node.energy = temp.energy
 
         return current_node
 
-    def best_first_search(self, root_node: Board, heuristic_dic: dict) -> Board:
+    def best_first_search(self, root_node: Board) -> Board:
         priority_queue = [(-0, root_node)]  # Priority queue with (cost, Board) tuples
         visited = {}
 
@@ -470,12 +465,11 @@ class Tree:
             _, current_node = heapq.heappop(priority_queue)
             
             visited[current_node.current_position] = current_node.energy
-            
             curr_pos = current_node.current_position
             moves = current_node.available_moves(curr_pos, cost=True)  # successor
 
             for move, move_cost in moves:
-                total_cost = current_node.energy + heuristic_dic.get(current_node.current_position, 0)
+                total_cost = current_node.energy + current_node.heuristic()
                 new_position = current_node.move_validity(curr_pos, move)
                 child_node = Board(
                     current_node.board,
@@ -497,7 +491,7 @@ class Tree:
                 
                 elif child_node.current_position in visited:
                 
-                    if child_node.energy >= visited[child_node.current_position]:
+                    if child_node.energy > visited[child_node.current_position]:
                         heapq.heappush(priority_queue, (-total_cost, child_node))
                         visited[child_node.current_position] = child_node.energy
                 else:
@@ -510,7 +504,7 @@ class Tree:
                     if self.found_targets >= self.targets:
                         return current_node
 
-                    temp = self.best_first_search(current_node, heuristic_dic)
+                    temp = self.best_first_search(current_node)
                     current_node.path_to_parent = temp.path_to_parent
                     current_node.energy = temp.energy
 
