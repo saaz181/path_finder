@@ -1,8 +1,6 @@
 from collections import deque
-import time
 import heapq
-import hashlib
-
+import numpy as np
 
 
 class OrderedSet:
@@ -129,32 +127,33 @@ class Board:
     def __lt__(self, other):
         return self.energy < other.energy
 
+    def is_remaining_target(self) -> bool:
+        is_T = False
+        for i in self.board:
+            for j in i:
+                if 'T' in j:
+                    is_T = True
 
-    def heuristic(self) -> int:
-        # Define a high value for initial minimum distance
-        min_distance = float('inf')
-        # Define a low value for initial maximum energy
-        max_energy = float('-inf')
-        # Get the current position
-        curr_pos = self.current_position
+        return is_T    
 
-        for i in range(self.board_row_size):
-            for j in range(self.board_col_size):
-                # Check every cell in the board if there's a remaining target
-                if 'T' in self.board[i][j]:
-                    # If there's a target, calculate Manhattan distance
-                    distance = abs(curr_pos[0] - i) + abs(curr_pos[1] - j)
-                    # Update the minimum distance
-                    min_distance = min(min_distance, distance)
-
-                # Check every cell in the board if there's an energy point
-                if len(self.board[i][j]) > 1 and self.board[i][j][1] in self.extra_energy.keys():
-                    # If there's an energy point, update the maximum energy
-                    max_energy = max(max_energy, self.extra_energy[self.board[i][j][1]])
-
-        # Balance both the distance to target and energy points
-        return min_distance - max_energy
-
+    def heuristic(self, matrix) -> int:
+        heuristic = {}
+        for i in range(len(matrix)):
+            for j in range(len(matrix[i])):
+                distances = []
+                curr_pos = (i, j)
+                element = matrix[i][j]
+                for row in range(self.board_row_size):
+                    for col in range(self.board_col_size):
+                        if len(self.board[row][col]) > 1 and self.board[row][col][1] in self.extra_energy.keys():
+                            distance = np.sqrt((curr_pos[0] - row) ** 2 + (curr_pos[1] - col) ** 2)
+                            distances.append(distance)
+                if len(distances) == 0:
+                    return np.inf
+                avg_distance = np.mean(distances)
+                heuristic[curr_pos] = avg_distance
+        return heuristic
+    
 
 class Tree:
     def __init__(self, matrix):
@@ -173,6 +172,23 @@ class Tree:
                     positions_to_numbers.append((i, j))
         return positions_to_numbers
 
+    def all_targets_found(self, path, targets, initial_position):
+        x, y = initial_position
+        targets_found = []
+        for move in path:
+            if move == 'R':
+                y += 1
+            elif move == 'L':
+                y -= 1
+            elif move == 'U':
+                x -= 1
+            elif move == 'D':
+                x += 1
+            current_position = (x, y)
+            if current_position in targets:
+                targets_found.append(current_position)
+        return set(targets) == set(targets_found)
+
     def dfs(self, root_node: Board) -> Board | None:
         visited = {}
         stack = OrderedSet()
@@ -180,7 +196,9 @@ class Tree:
 
         while stack and self.found_targets < self.targets:
             current_node = stack.pop()
+            
             visited[current_node.current_position] = current_node.energy
+            
             curr_pos = current_node.current_position  # (row, col)
             if 'T' in current_node.board[curr_pos[0]][curr_pos[1]]:
                 current_node.update_target(current_node.current_position)
@@ -276,31 +294,43 @@ class Tree:
         return current_node
 
     def ids(self, root_node: Board, max_depth: int) -> Board | None:
-        for depth_limit in range(1, max_depth + 1):
-            result = self.dls(root_node, depth_limit)
+        depth_limit = 1
+        visited = dict()
+        while depth_limit < max_depth:
+            result = self._recursive_dls(root_node, depth_limit, visited)
             if result is not None:
                 return result
-        return None
-    
-    def dls(self, current_node: Board, depth_limit: int) -> Board | None:
-        return self._recursive_dls(current_node, depth_limit)
+            depth_limit += 1
 
 
-    def _recursive_dls(self, current_node: Board, depth_limit: int) -> Board | None:
+    def _recursive_dls(self, current_node: Board, depth_limit: int, visited: dict) -> Board | None:
         if depth_limit == 0:
             return None  # Reached depth limit, no solution found at this level
 
         curr_pos = current_node.current_position
         moves = current_node.available_moves(curr_pos)  # successor function
 
+        
+        if current_node.current_position not in visited:
+            visited[current_node.current_position] = current_node.energy
+                
+        elif current_node.current_position in visited:
+            if current_node.energy >= visited[current_node.current_position]:
+                visited[current_node.current_position] = current_node.energy
+                self._recursive_dls(current_node, depth_limit - 1, visited)
+
+        
+
         for move in moves:
-            new_position = current_node.move_validity(curr_pos, move)
+            new_position: (int, int) = current_node.move_validity(curr_pos, move)
+            child_energy: int = current_node.energy + current_node.calculate_energy(new_position)
+            
             child_node = Board(
                 current_node.board,
                 current_node.board_row_size,
                 current_node.board_col_size,
                 new_position,
-                current_node.energy + current_node.calculate_energy(new_position)
+                child_energy
             )
 
             for _move in current_node.path_to_parent:
@@ -311,23 +341,14 @@ class Tree:
             if 'T' in current_node.board[curr_pos[0]][curr_pos[1]]:
                 current_node.update_target(current_node.current_position)
 
-                self.found_targets += 1
-                if self.found_targets >= self.targets:
-                    return current_node
-                
-                temp = self._recursive_dls(current_node, depth_limit - 1)
-                if temp is not None:
-                    current_node.path_to_parent = temp.path_to_parent
-                    current_node.energy = temp.energy
+                return current_node
 
-
-            result = self._recursive_dls(child_node, depth_limit - 1)
+            result = self._recursive_dls(child_node, depth_limit - 1, visited)
 
             if result is not None:
                 return result
 
         return None  # No solution found at this level
-
 
 
     def ucs(self, root_node: Board) -> Board:
@@ -380,7 +401,7 @@ class Tree:
 
         return current_node
 
-    def astar(self, root_node: Board) -> Board:
+    def astar(self, root_node: Board, heuristic_dic: dict) -> Board:
         priority_queue = [(-0, root_node)]  # Priority queue with (cost, Board) tuples
         visited = {}
 
@@ -393,7 +414,7 @@ class Tree:
             moves = current_node.available_moves(curr_pos, cost=True)  # successor
 
             for move, move_cost in moves:
-                total_cost = current_node.energy + move_cost + current_node.heuristic()
+                total_cost = current_node.energy + move_cost + heuristic_dic.get(current_node.current_position, 0)
                 new_position = current_node.move_validity(curr_pos, move)
                 
                 child_node = Board(
@@ -428,14 +449,14 @@ class Tree:
                     if self.found_targets >= self.targets:
                         return current_node
 
-                    temp = self.astar(current_node)
+                    temp = self.astar(current_node, heuristic_dic)
                     current_node.path_to_parent = temp.path_to_parent
                     current_node.energy = temp.energy
 
         return current_node
 
 
-    def best_first_search(self, root_node: Board) -> Board:
+    def best_first_search(self, root_node: Board, heuristic_dic: dict) -> Board:
         priority_queue = [(-0, root_node)]  # Priority queue with (cost, Board) tuples
         visited = {}
 
@@ -446,7 +467,7 @@ class Tree:
             moves = current_node.available_moves(curr_pos, cost=True)  # successor
 
             for move, move_cost in moves:
-                total_cost = current_node.energy + current_node.heuristic()
+                total_cost = current_node.energy + heuristic_dic.get(current_node.current_position, 0)
                 new_position = current_node.move_validity(curr_pos, move)
                 child_node = Board(
                     current_node.board,
@@ -480,136 +501,8 @@ class Tree:
                     if self.found_targets >= self.targets:
                         return current_node
 
-                    temp = self.astar(current_node)
+                    temp = self.best_first_search(current_node, heuristic_dic)
                     current_node.path_to_parent = temp.path_to_parent
                     current_node.energy = temp.energy
 
         return current_node
-
-
-
-
-# matrix = [
-#     ['1R', '1', '1', '5', '5', '4', '2C', '1', '15', '1B'],
-#     ['1', '1', '5', '3', '5', '5', '5', '4', '5', 'X'],
-#     ['5', '1I', '1', '6', '2', '2', '2', '1', '1', '1T'],
-#     ['X', 'X', '1', '6', '5', '5', '2', '1', '1', 'X'],
-#     ['X', 'X', '1', 'X', 'X', '50', '2', '1C', '1', 'X'],
-#     ['1', '1', '1', '2', '2', '2T', '2', '1', '1', '1']
-# ]
-# initial_energy = 500
-# initial_position = (0, 0)
-
-####### BFS #######
-# matrix = [
-#     ['1R', '1', 'X', '5T', '5', '4', '2C', '1', '15', '1B'],
-#     ['1', '1', '5', '30', '5', '5', '5', 'X', 'X', 'X'],
-#     ['X', 'X', '1', 'X', 'X', '2', '2', 'X', '1', '1T'],
-#     ['2I', '5', '1', '6', '5', '5', '2', '1', '1', 'X'],
-#     ['X', 'X', 'X', 'X', 'X', '50', '2', '1C', 'X', 'X'],
-#     ['1I', '1', '1T', '2', '2', '2T', '2', '1', '1', '1']
-# ]
-# print("BFS = ")
-# board = Board(matrix, 6, 10, initial_position, initial_energy)
-# tree = Tree(matrix)
-# start = time.time()
-# result = tree.bfs(board)
-# print(result.path_to_parent)
-# print(result.energy)
-# print("time elapsed: {:.2f}s".format(time.time() - start))
-# ####### DFS #######
-# matrix = [
-#     ['1R', '1', 'X', '5T', '5', '4', '2C', '1', '15', '1B'],
-#     ['1', '1', '5', '30', '5', '5', '5', 'X', 'X', 'X'],
-#     ['X', 'X', '1', 'X', 'X', '2', '2', 'X', '1', '1T'],
-#     ['2I', '5', '1', '6', '5', '5', '2', '1', '1', 'X'],
-#     ['X', 'X', 'X', 'X', 'X', '50', '2', '1C', 'X', 'X'],
-#     ['1I', '1', '1T', '2', '2', '2T', '2', '1', '1', '1']
-# ]
-
-# print("DFS = ")
-# board2 = Board(matrix, 6, 10, initial_position, initial_energy)
-# tree2 = Tree(matrix)
-# start = time.time()
-# result2 = tree2.dfs(board2)
-# print(result2.path_to_parent)
-# print(result2.energy)
-# print("time elapsed: {:.2f}s".format(time.time() - start))
-
-
-# ####### IDS ########
-# matrix = [
-#     ['1R', '1' , '1' , '5', '5', '4' , '2C', '1' , '15', '1B'],
-#     ['1' , '1' , '5' , '3', '5', '5' , '5' , '4' , '5' , 'X'],
-#     ['5' , '1I', '1' , '6', '2', '2' , '2' , '1' , '1' , '1T'],
-#     ['X' , 'X' , '1' , '6', '5', '5' , '2' , '1' , '1' , 'X'],
-#     ['X' , 'X' , '1' , 'X', 'X', '50', '2' , '1C', '1' , 'X'],
-#     ['1' , '1' , '1' , '2', '2', '2T', '2' , '1' , '1' , '1']
-# ]
-
-# print("IDS = ")
-# board_ids = Board(matrix, 6, 10, initial_position, initial_energy)
-# tree_ids = Tree(matrix)
-# max_depth_limit = 50
-# result_ids = tree_ids.ids(board_ids, max_depth_limit)
-# print(result_ids.path_to_parent)
-# print(result_ids.energy)
-
-
-
-
-# ####### UCS #######
-# matrix = [
-#     ['1R', '1', 'X', '5T', '5', '4', '2C', '1', '15', '1B'],
-#     ['1', '1', '5', '30', '5', '5', '5', 'X', 'X', 'X'],
-#     ['X', 'X', '1', 'X', 'X', '2', '2', 'X', '1', '1T'],
-#     ['2I', '5', '1', '6', '5', '5', '2', '1', '1', 'X'],
-#     ['X', 'X', 'X', 'X', 'X', '50', '2', '1C', 'X', 'X'],
-#     ['1I', '1', '1T', '2', '2', '2T', '2', '1', '1', '1']
-# ]
-# print("UCS = ")
-# board3 = Board(matrix, 6, 10, initial_position, initial_energy)
-# tree3 = Tree(matrix)
-# start = time.time()
-# result3 = tree3.ucs(board3)
-# print(result3.path_to_parent)
-# print(result3.energy)
-# print("time elapsed: {:.2f}s".format(time.time() - start))
-
-# ####### A* #######
-# matrix = [
-#     ['1R', '1', 'X', '5T', '5', '4', '2C', '1', '15', '1B'],
-#     ['1', '1', '5', '30', '5', '5', '5', 'X', 'X', 'X'],
-#     ['X', 'X', '1', 'X', 'X', '2', '2', 'X', '1', '1T'],
-#     ['2I', '5', '1', '6', '5', '5', '2', '1', '1', 'X'],
-#     ['X', 'X', 'X', 'X', 'X', '50', '2', '1C', 'X', 'X'],
-#     ['1I', '1', '1T', '2', '2', '2T', '2', '1', '1', '1']
-# ]
-
-# print("َA* = ")
-# board4 = Board(matrix, 6, 10, initial_position, initial_energy)
-# tree4 = Tree(matrix)
-# start = time.time()
-# result = tree4.astar(board4)
-# print(result.path_to_parent)
-# print(result.energy)
-# print("time elapsed: {:.2f}s".format(time.time() - start))
-
-
-# ###### Best First Search #####
-# ####### A* #######
-# matrix = [
-#     ['1R', '1', 'X', '5T', '5', '4', '2C', '1', '15', '1B'],
-#     ['1', '1', '5', '30', '5', '5', '5', 'X', 'X', 'X'],
-#     ['X', 'X', '1', 'X', 'X', '2', '2', 'X', '1', '1T'],
-#     ['2I', '5', '1', '6', '5', '5', '2', '1', '1', 'X'],
-#     ['X', 'X', 'X', 'X', 'X', '50', '2', '1C', 'X', 'X'],
-#     ['1I', '1', '1T', '2', '2', '2T', '2', '1', '1', '1']
-# ]
-
-# print("Best First Search* = ")
-# board_best_first_search = Board(matrix, 6, 10, initial_position, initial_energy)
-# tree_best_first_search = Tree(matrix)
-# result_best_first_search = tree_best_first_search.best_first_search(board_best_first_search)
-# print(result_best_first_search.path_to_parent)
-# print(result_best_first_search.energy)

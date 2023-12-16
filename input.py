@@ -48,3 +48,4 @@ def find_starting_point(grid, energy):
                 return Node(None, 0, position, energy,'R')
 
     return None  # Return None if starting point not found
+
