@@ -1,5 +1,5 @@
 from main import Board, Tree
-import time
+import timeit
 import copy
 
 
@@ -38,15 +38,15 @@ def run_bfs(matrix: list[list], row_size: int, col_size: int, position: (int, in
     board = Board(matrix, row_size, col_size, position, energy)
     tree = Tree(matrix)
 
-    start = time.time()
+    start = timeit.default_timer()
     bfs_result = tree.bfs(board)
-    end = time.time()
 
     if tree.all_targets_found(bfs_result.path_to_parent, tree.target_numerator(Main_matrix), position):
         print(f"{bfs_result.energy}, {''.join(bfs_result.path_to_parent)}")
     else:
         print("There is no route!!!")
-    print(f"Time of BFS execution: {end - start}(s)")
+    end = timeit.default_timer()
+    print("time elapsed: {:f}s".format(end - start))
 
     print("###########################\n")
 
@@ -61,7 +61,7 @@ def run_dfs(matrix: list[list], row_size: int, col_size: int, position: (int, in
     board = Board(matrix, row_size, col_size, position, energy)
     tree = Tree(matrix)
 
-    start = time.time()
+    start = timeit.default_timer()
 
     try:
         dfs_result = tree.dfs(board)
@@ -70,9 +70,8 @@ def run_dfs(matrix: list[list], row_size: int, col_size: int, position: (int, in
     except IndexError:
         print("There is no route!!!")
 
-    end = time.time()
-
-    print(f"time of DFS execution: {end - start}(s)")
+    end = timeit.default_timer()
+    print("time elapsed: {:f}s".format(end - start))
 
     print("###########################\n")
 
@@ -90,7 +89,7 @@ def run_ids(matrix: list[list], row_size: int, col_size: int, position: (int, in
     targets = tree.targets
     found_target = 0
 
-    start = time.time()
+    start = timeit.default_timer()
     initial_board = board
     try:
         while found_target != targets:
@@ -103,9 +102,8 @@ def run_ids(matrix: list[list], row_size: int, col_size: int, position: (int, in
     except AttributeError:
         print('There is no route!!!')
 
-    end = time.time()
-
-    print(f"time of IDS execution: {end - start}(s)")
+    end = timeit.default_timer()
+    print("time elapsed: {:f}s".format(end - start))
 
     print("###########################")
 
@@ -120,16 +118,16 @@ def run_ucs(matrix: list[list], row_size: int, col_size: int, position: (int, in
     board = Board(matrix, row_size, col_size, position, energy)
     tree = Tree(matrix)
 
-    start = time.time()
+    start = timeit.default_timer()
     ucs_result = tree.ucs(board)
-    end = time.time()
 
     if tree.all_targets_found(ucs_result.path_to_parent, tree.target_numerator(Main_matrix), position):
         print(f"{ucs_result.energy}, {''.join(ucs_result.path_to_parent)}")
     else:
         print("There is no route!!!")
 
-    print(f"time of UCS execution: {end - start}(s)")
+    end = timeit.default_timer()
+    print("time elapsed: {:f}s".format(end - start))
 
     print("###########################\n")
 
@@ -148,9 +146,8 @@ def run_A_star(matrix: list[list], row_size: int, col_size: int, position: (int,
 
     tree = Tree(matrix)
 
-    start = time.time()
+    start = timeit.default_timer()
     astar_result = tree.astar(board)
-    end = time.time()
 
     if tree.all_targets_found(astar_result.path_to_parent, tree.target_numerator(Main_matrix), position):
         energy_astar = board1.calculate_path_energy(astar_result.path_to_parent, position)
@@ -158,7 +155,8 @@ def run_A_star(matrix: list[list], row_size: int, col_size: int, position: (int,
     else:
         print("There is no route!!!")
 
-    print(f"time of A* execution: {end - start}(s)")
+    end = timeit.default_timer()
+    print("time elapsed: {:f}s".format(end - start))
 
     print("###########################\n")
 
@@ -176,9 +174,8 @@ def run_best_first_search(matrix: list[list], row_size: int, col_size: int, posi
     board2 = Board(matrix_3, row_size, col_size, position, energy)
     tree = Tree(matrix)
 
-    start = time.time()
+    start = timeit.default_timer()
     best_first_search_result = tree.best_first_search(board)
-    end = time.time()
 
     if tree.all_targets_found(best_first_search_result.path_to_parent, tree.target_numerator(Main_matrix), position):
         energy_best_first_search = board2.calculate_path_energy(best_first_search_result.path_to_parent, position)
@@ -187,7 +184,8 @@ def run_best_first_search(matrix: list[list], row_size: int, col_size: int, posi
     else:
         print("There is no route!!!")
 
-    print(f"time of Best First Search execution: {end - start}(s)")
+    end = timeit.default_timer()
+    print("time elapsed: {:f}s".format(end - start))
 
     print("###########################\n")
 
